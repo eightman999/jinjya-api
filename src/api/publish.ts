@@ -1,11 +1,17 @@
 import { OmikujiSchema } from "./schema";
 import type { Env } from "../../types/worker-configuration";
 import { z } from "zod";
+import { checkRateLimit } from '../utils/checkRateLimit';
 
 const BUFFER_PREFIX = "buffer:"; // 例: buffer:furin:123456789
 const BUFFER_DURATION_MS = 60 * 60 * 1000;
 
-export async function handlePublish(env: Env): Promise<Response> {
+export async function handlePublish(request: Request, env: Env): Promise<Response> {
+	// レート制限チェック
+	if (!await checkRateLimit(env, request.headers.get("CF-Connecting-IP") || "unknown")) {
+		return new Response("Too Many Requests", { status: 429 });
+	}
+
 	const now = Date.now();
 	const cutoff = now - BUFFER_DURATION_MS;
 
@@ -58,11 +64,18 @@ export async function handlePublish(env: Env): Promise<Response> {
 			continue;
 		}
 
-		// ③ 成功したバッファを削除
+		// ③ 成功したバッファと投稿データを削除
 		for (const entry of grouped[jinjyaId]) {
+			// バッファの削除
 			const timeKey = Object.keys(list.keys).find(k => k.startsWith(`buffer:${jinjyaId}:`) && k.includes(entry.message));
 			if (timeKey) {
 				await env.JINJYA_STORE.delete(timeKey);
+			}
+
+			// 投稿データの削除
+			const submitKey = Object.keys(list.keys).find(k => k.startsWith(`submit:${jinjyaId}:`) && k.includes(entry.message));
+			if (submitKey) {
+				await env.JINJYA_STORE.delete(submitKey);
 			}
 		}
 

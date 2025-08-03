@@ -1,9 +1,15 @@
 // src/api/jinjya_register.ts
 import { Env } from '../../types/worker-configuration';
+import { checkRateLimit } from '../utils/checkRateLimit';
 
 export async function handleRegister(request: Request, env: Env): Promise<Response> {
 	console.log("🔥 handleRegister invoked");
 	console.log("🧪 env.JINJYA_DB =", env.JINJYA_DB);
+
+	// レート制限チェック
+	if (!await checkRateLimit(env, request.headers.get("CF-Connecting-IP") || "unknown")) {
+		return new Response("Too Many Requests", { status: 429 });
+	}
 
 	if (request.method !== "POST") {
 		return new Response("Method Not Allowed", { status: 405 });
@@ -17,8 +23,7 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
 	}
 
 	// Validate tags if provided
-	let tagsJson = null;
-	if (tags) {
+	if (tags && typeof tags !== "string") {
 		if (typeof tags !== 'object' || Array.isArray(tags)) {
 			return new Response("Tags must be an object", { status: 400 });
 		}
@@ -28,7 +33,6 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
 				return new Response("All tag keys and values must be strings", { status: 400 });
 			}
 		}
-		tagsJson = JSON.stringify(tags);
 	}
 
 	// 重複チェック
@@ -43,7 +47,13 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
 	// 挿入
 	await env.JINJYA_DB.prepare(
 		`INSERT INTO jinjya (id, name, spreadsheet_url, owner, tags) VALUES (?, ?, ?, ?, ?)`
-	).bind(id, name, spreadsheet_url, owner || null, tagsJson).run();
+	).bind(
+		id,
+		name,
+		spreadsheet_url,
+		owner || null,
+		typeof tags === "string" ? tags : JSON.stringify(tags || {})
+	).run();
 
 	return new Response("神社を登録しました", { status: 201 });
 }

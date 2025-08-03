@@ -5,6 +5,7 @@ declare namespace Cloudflare {
 	interface Env {
 		JINJYA_STORE: KVNamespace;
 		JINJYA_DB: D1Database;
+		RATE_LIMIT: KVNamespace;
 	}
 }
 

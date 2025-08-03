@@ -3,6 +3,7 @@ import { z } from "zod";
 import { OmikujiSchema } from "./schema";
 import type { Env } from '../../types/worker-configuration';
 import { NG_WORDS } from "../constants/ngWords";
+import { checkRateLimit } from '../utils/checkRateLimit';
 
 
 const MAX_LENGTH = 200;
@@ -19,6 +20,11 @@ export async function handleSubmit(
 	request: Request,
 	env: Env
 ): Promise<Response> {
+	// レート制限チェック
+	if (!await checkRateLimit(env, request.headers.get("CF-Connecting-IP") || "unknown")) {
+		return new Response("Too Many Requests", { status: 429 });
+	}
+
 	try {
 		const body = await request.json();
 
@@ -47,7 +53,7 @@ export async function handleSubmit(
 			for (const tagCategory of Object.keys(omikuji.tags)) {
 				if (!allowedTagCategories.includes(tagCategory)) {
 					return new Response(
-						`Invalid tag category "${tagCategory}". Allowed categories for this shrine: ${allowedTagCategories.join(', ')}`, 
+						`Invalid tag category "${tagCategory}". Allowed categories for this shrine: ${allowedTagCategories.join(', ')}`,
 						{ status: 400 }
 					);
 				}

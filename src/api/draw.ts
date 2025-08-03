@@ -1,7 +1,13 @@
 // src/api/draw.ts
 import { Env } from '../../types/worker-configuration';
+import { checkRateLimit } from '../utils/checkRateLimit';
 
 export async function handleDraw(request: Request, env: Env): Promise<Response> {
+	// レート制限チェック
+	if (!await checkRateLimit(env, request.headers.get("CF-Connecting-IP") || "unknown")) {
+		return new Response("Too Many Requests", { status: 429 });
+	}
+
 	const { searchParams } = new URL(request.url);
 	const jinjyaId = searchParams.get("jinjya") || "default";
 
