@@ -39,11 +39,12 @@ export async function handleSubmit(
 		}
 
 		// ✅ バッファキーを作成
-		const jinjyaId = "furin"; // Ver0では固定
-		const kvKey = `buffer:${jinjyaId}:${Date.now()}`;
+		const jinjyaId = body.jinjya ?? "default";
+		const timestamp = Date.now();
+		const key = `buffer:${jinjyaId}:${timestamp}`;
 
 		// ✅ 保存
-		await env.JINJYA_STORE.put(kvKey, JSON.stringify(omikuji));
+		await env.JINJYA_STORE.put(key, JSON.stringify(omikuji));
 
 		return new Response("奉納を受け付けました🙏", { status: 200 });
 	} catch (err: any) {
