@@ -25,6 +25,35 @@ export async function handleSubmit(
 		// ✅ スキーマ検証
 		const omikuji = OmikujiSchema.parse(body);
 
+		// ✅ 神社の固定タグカテゴリを取得・検証
+		const jinjyaId = body.jinjya ?? "default";
+		const jinjyaData = await env.JINJYA_DB.prepare(
+			`SELECT tags FROM jinjya WHERE id = ?`
+		).bind(jinjyaId).first();
+
+		// 神社の固定タグカテゴリを取得（なければ制限なし）
+		let allowedTagCategories: string[] = [];
+		if (jinjyaData && jinjyaData.tags) {
+			try {
+				const shrineTagConfig = JSON.parse(jinjyaData.tags as string);
+				allowedTagCategories = Object.keys(shrineTagConfig);
+			} catch (e) {
+				console.warn(`Invalid tags JSON for shrine ${jinjyaId}:`, e);
+			}
+		}
+
+		// ✅ ユーザー入力タグの検証（神社が固定タグを設定している場合のみ）
+		if (allowedTagCategories.length > 0 && omikuji.tags) {
+			for (const tagCategory of Object.keys(omikuji.tags)) {
+				if (!allowedTagCategories.includes(tagCategory)) {
+					return new Response(
+						`Invalid tag category "${tagCategory}". Allowed categories for this shrine: ${allowedTagCategories.join(', ')}`, 
+						{ status: 400 }
+					);
+				}
+			}
+		}
+
 		// ✅ NGワードチェック & 文字数制限
 		for (const key of Object.keys(omikuji)) {
 			const value = omikuji[key as keyof typeof omikuji];
@@ -51,7 +80,7 @@ export async function handleSubmit(
 		}
 
 		// ✅ バッファキーを作成
-		const jinjyaId = body.jinjya ?? "default";
+		// jinjyaIdは既に上で取得済み
 		const timestamp = Date.now();
 		const key = `buffer:${jinjyaId}:${timestamp}`;
 

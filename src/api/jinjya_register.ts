@@ -10,10 +10,25 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
 	}
 
 	const data = await request.json();
-	const { id, name, spreadsheet_url, owner } = data;
+	const { id, name, spreadsheet_url, owner, tags } = data;
 
 	if (!id || !name || !spreadsheet_url) {
 		return new Response("Missing required fields", { status: 400 });
+	}
+
+	// Validate tags if provided
+	let tagsJson = null;
+	if (tags) {
+		if (typeof tags !== 'object' || Array.isArray(tags)) {
+			return new Response("Tags must be an object", { status: 400 });
+		}
+		// Validate that all tag values are strings
+		for (const [key, value] of Object.entries(tags)) {
+			if (typeof key !== 'string' || typeof value !== 'string') {
+				return new Response("All tag keys and values must be strings", { status: 400 });
+			}
+		}
+		tagsJson = JSON.stringify(tags);
 	}
 
 	// 重複チェック
@@ -27,8 +42,8 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
 
 	// 挿入
 	await env.JINJYA_DB.prepare(
-		`INSERT INTO jinjya (id, name, spreadsheet_url, owner) VALUES (?, ?, ?, ?)`
-	).bind(id, name, spreadsheet_url, owner || null).run();
+		`INSERT INTO jinjya (id, name, spreadsheet_url, owner, tags) VALUES (?, ?, ?, ?, ?)`
+	).bind(id, name, spreadsheet_url, owner || null, tagsJson).run();
 
 	return new Response("神社を登録しました", { status: 201 });
 }
