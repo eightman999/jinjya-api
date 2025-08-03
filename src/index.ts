@@ -1,18 +1,22 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { handleSubmit } from "./api/submit";
+import { handleDraw } from "./api/draw";
+import { Env } from '../types/worker-configuration';
+import { ExecutionContext } from '@cloudflare/workers-types';
 
 export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		return new Response('Hello World!');
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		const url = new URL(request.url);
+		const pathname = url.pathname;
+
+		// API routing
+		if (pathname === "/api/submit" && request.method === "POST") {
+			return await handleSubmit(request, env);
+		}
+
+		if (pathname === "/api/draw" && request.method === "GET") {
+			return await handleDraw(request, env);
+		}
+
+		return new Response("Not Found", { status: 404 });
 	},
-} satisfies ExportedHandler<Env>;
+};

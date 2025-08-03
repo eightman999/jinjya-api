@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/src/api/draw.ts">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/src/api/draw.ts" />
+              <option name="originalContent" value="// src/api/draw.ts&#10;import { Env } from '../../types/worker-configuration';&#10;&#10;export async function handleDraw(request: Request, env: Env): Promise&lt;Response&gt; {&#10;&#9;const { searchParams } = new URL(request.url);&#10;&#9;const jinjyaId = searchParams.get(&quot;jinjya&quot;) || &quot;default&quot;;&#10;&#10;&#9;const listResponse = await env.JINJYA_STORE.list({ prefix: `buffer:${jinjyaId}:` });&#10;&#9;const keys = listResponse.keys.map((k: { name: string }) =&gt; k.name);&#10;&#10;&#9;if (keys.length === 0) {&#10;&#9;&#9;return new Response(&quot;まだ誰も奉納していません&quot;, { status: 404 });&#10;&#9;}&#10;&#10;&#9;// バッファ上限制御（例：100件超えたら古いもの削除）&#10;&#9;const MAX_BUFFER = 1000;&#10;&#9;if (keys.length &gt; MAX_BUFFER) {&#10;&#9;&#9;const sorted = keys.sort(); // timestamp順&#10;&#9;&#9;const excess = sorted.slice(0, keys.length - MAX_BUFFER);&#10;&#9;&#9;await Promise.all(excess.map(k =&gt; env.JINJYA_STORE.delete(k)));&#10;&#9;}&#10;&#10;&#9;// ランダムに1つ選ぶ&#10;&#9;const randomKey = keys[Math.floor(Math.random() * keys.length)];&#10;&#9;const omikujiStr = await env.JINJYA_STORE.get(randomKey);&#10;&#10;&#9;if (!omikujiStr) {&#10;&#9;&#9;return new Response(&quot;おみくじが壊れています…&quot;, { status: 500 });&#10;&#9;}&#10;&#10;&#9;return new Response(omikujiStr, {&#10;&#9;&#9;headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },&#10;&#9;&#9;status: 200,&#10;&#9;});&#10;}&#10;" />
+              <option name="updatedContent" value="// src/api/draw.ts&#10;import { Env } from '../../types/worker-configuration';&#10;&#10;export async function handleDraw(request: Request, env: Env): Promise&lt;Response&gt; {&#10;&#9;const { searchParams } = new URL(request.url);&#10;&#9;const jinjyaId = searchParams.get(&quot;jinjya&quot;) || &quot;default&quot;;&#10;&#10;&#9;const listResponse = await env.JINJYA_STORE.list({ prefix: `buffer:${jinjyaId}:` });&#10;&#9;const keys = listResponse.keys.map((k: { name: string }) =&gt; k.name);&#10;&#10;&#9;if (keys.length === 0) {&#10;&#9;&#9;return new Response(&quot;まだ誰も奉納していません&quot;, { status: 404 });&#10;&#9;}&#10;&#10;&#9;// バッファ上限制御（例：100件超えたら古いもの削除）&#10;&#9;const MAX_BUFFER = 1000;&#10;&#9;if (keys.length &gt; MAX_BUFFER) {&#10;&#9;&#9;const sorted = keys.sort(); // timestamp順&#10;&#9;&#9;const excess = sorted.slice(0, keys.length - MAX_BUFFER);&#10;&#9;&#9;await Promise.all(excess.map((k: string) =&gt; env.JINJYA_STORE.delete(k)));&#10;&#9;}&#10;&#10;&#9;// ランダムに1つ選ぶ&#10;&#9;const randomKey = keys[Math.floor(Math.random() * keys.length)];&#10;&#9;const omikujiStr = await env.JINJYA_STORE.get(randomKey);&#10;&#10;&#9;if (!omikujiStr) {&#10;&#9;&#9;return new Response(&quot;おみくじが壊れています…&quot;, { status: 500 });&#10;&#9;}&#10;&#10;&#9;return new Response(omikujiStr, {&#10;&#9;&#9;headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },&#10;&#9;&#9;status: 200,&#10;&#9;});&#10;}" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/src/index.ts">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/src/index.ts" />
+              <option name="originalContent" value="import { handleSubmit } from &quot;./api/submit&quot;;&#10;import { handleDraw } from &quot;./api/draw&quot;;&#10;import { Env } from '../types/worker-configuration';&#10;&#10;export default {&#10;&#9;async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise&lt;Response&gt; {&#10;&#9;&#9;const url = new URL(request.url);&#10;&#9;&#9;const pathname = url.pathname;&#10;&#10;&#9;&#9;// API routing&#10;&#9;&#9;if (pathname === &quot;/api/submit&quot; &amp;&amp; request.method === &quot;POST&quot;) {&#10;&#9;&#9;&#9;return await handleSubmit(request, env);&#10;&#9;&#9;}&#10;&#10;&#9;&#9;if (pathname === &quot;/api/draw&quot; &amp;&amp; request.method === &quot;GET&quot;) {&#10;&#9;&#9;&#9;return await handleDraw(request, env);&#10;&#9;&#9;}&#10;&#10;&#9;&#9;return new Response(&quot;Not Found&quot;, { status: 404 });&#10;&#9;},&#10;};&#10;" />
+              <option name="updatedContent" value="import { handleSubmit } from &quot;./api/submit&quot;;&#10;import { handleDraw } from &quot;./api/draw&quot;;&#10;import { Env } from '../types/worker-configuration';&#10;import { ExecutionContext } from '@cloudflare/workers-types';&#10;&#10;export default {&#10;&#9;async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise&lt;Response&gt; {&#10;&#9;&#9;const url = new URL(request.url);&#10;&#9;&#9;const pathname = url.pathname;&#10;&#10;&#9;&#9;// API routing&#10;&#9;&#9;if (pathname === &quot;/api/submit&quot; &amp;&amp; request.method === &quot;POST&quot;) {&#10;&#9;&#9;&#9;return await handleSubmit(request, env);&#10;&#9;&#9;}&#10;&#10;&#9;&#9;if (pathname === &quot;/api/draw&quot; &amp;&amp; request.method === &quot;GET&quot;) {&#10;&#9;&#9;&#9;return await handleDraw(request, env);&#10;&#9;&#9;}&#10;&#10;&#9;&#9;return new Response(&quot;Not Found&quot;, { status: 404 });&#10;&#9;},&#10;};" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/types/worker-configuration.d.ts">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/types/worker-configuration.d.ts" />
+              <option name="originalContent" value="// ...既存の worker-configuration.d.ts の内容を移動...&#10;// ...既存の worker-configuration.d.ts の内容を移動...&#10;// ...既存の worker-configuration.d.ts の内容を移動...&#10;// ...既存の worker-configuration.d.ts の内容を移動...&#10;// ...既存の worker-configuration.d.ts の内容を移動...&#10;// ...既存の worker-configuration.d.ts の内容を移動...&#10;// ...既存の worker-configuration.d.ts の内容を移動...&#10;// ...既存の worker-configuration.d.ts の内容を移動...&#10;/* eslint-disable */&#10;// Generated by Wrangler by running `wrangler types` (hash: 869ac3b4ce0f52ba3b2e0bc70c49089e)&#10;interface Env extends Cloudflare.Env {}&#10;interface Env extends Cloudflare.Env {}&#10;// ...省略...&#10;interface Env extends Cloudflare.Env {}&#10;// ...省略...&#10;interface Env extends Cloudflare.Env {}&#10;// ...省略...&#10;interface Env extends Cloudflare.Env {}&#10;// ...省略...&#10;interface Env extends Cloudflare.Env {}&#10;// ...省略...&#10;interface Env extends Cloudflare.Env {}&#10;// ...省略...&#10;interface Env extends Cloudflare.Env {}&#10;// ...省略...&#10;export {}&#10;// ...省略...&#10;" />
+              <option name="updatedContent" value="/* eslint-disable */&#10;// Generated by Wrangler by running `wrangler types` (hash: 869ac3b4ce0f52ba3b2e0bc70c49089e)&#10;// Runtime types generated with workerd@1.20250730.0 2025-08-02&#10;declare namespace Cloudflare {&#10;&#9;interface Env {&#10;&#9;&#9;JINJYA_STORE: KVNamespace;&#10;&#9;}&#10;}&#10;&#10;export interface Env extends Cloudflare.Env {}&#10;export {}" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
