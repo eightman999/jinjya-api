@@ -9,3 +9,5 @@ declare namespace Cloudflare {
 
 export interface Env extends Cloudflare.Env {}
 export {}
+
+export const console = globalThis.console;

@@ -39,9 +39,8 @@ export async function handleSubmit(
 		}
 
 		// ✅ バッファキーを作成
-		const timestamp = Date.now();
-		const jinjyaId = omikuji.jinjya || "default";
-		const kvKey = `buffer:${jinjyaId}:${timestamp}`;
+		const jinjyaId = "furin"; // Ver0では固定
+		const kvKey = `buffer:${jinjyaId}:${Date.now()}`;
 
 		// ✅ 保存
 		await env.JINJYA_STORE.put(kvKey, JSON.stringify(omikuji));
