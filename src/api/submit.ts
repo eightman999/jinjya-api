@@ -35,6 +35,18 @@ export async function handleSubmit(
 				if (containsNGWords(value)) {
 					return new Response("Inappropriate content", { status: 400 });
 				}
+			} else if (typeof value === "object" && value !== null) {
+				// tags/extraオブジェクトの値をチェック
+				for (const nestedValue of Object.values(value)) {
+					if (typeof nestedValue === "string") {
+						if (nestedValue.length > MAX_LENGTH) {
+							return new Response("Too long input", { status: 400 });
+						}
+						if (containsNGWords(nestedValue)) {
+							return new Response("Inappropriate content", { status: 400 });
+						}
+					}
+				}
 			}
 		}
 

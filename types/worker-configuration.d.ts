@@ -4,11 +4,12 @@
 declare namespace Cloudflare {
 	interface Env {
 		JINJYA_STORE: KVNamespace;
+		JINJYA_DB: D1Database;
 	}
 }
 
 export interface Env extends Cloudflare.Env {
-	DB: any;
+
 }
 export {}
 

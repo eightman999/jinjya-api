@@ -1,25 +1,34 @@
 // src/api/jinjya_register.ts
 import { Env } from '../../types/worker-configuration';
 
-export async function handleJinjyaRegister(request: Request, env: Env): Promise<Response> {
-	const body = await request.json();
-	const { id, name, spreadsheet_url, owner } = body;
+export async function handleRegister(request: Request, env: Env): Promise<Response> {
+	console.log("🔥 handleRegister invoked");
+	console.log("🧪 env.JINJYA_DB =", env.JINJYA_DB);
+
+	if (request.method !== "POST") {
+		return new Response("Method Not Allowed", { status: 405 });
+	}
+
+	const data = await request.json();
+	const { id, name, spreadsheet_url, owner } = data;
 
 	if (!id || !name || !spreadsheet_url) {
-		return new Response("Missing fields", { status: 400 });
+		return new Response("Missing required fields", { status: 400 });
 	}
 
-	try {
-		await env.DB.prepare(`
-      INSERT INTO jinjya (id, name, spreadsheet_url, owner)
-      VALUES (?, ?, ?, ?)
-    `).bind(id, name, spreadsheet_url, owner || null).run();
+	// 重複チェック
+	const check = await env.JINJYA_DB.prepare(
+		`SELECT id FROM jinjya WHERE id = ?`
+	).bind(id).first();
 
-		return new Response("神社を登録しました⛩️", { status: 200 });
-	} catch (e) {
-		if (e instanceof Error) {
-			return new Response("登録失敗：" + e.message, { status: 500 });
-		}
-		return new Response("登録失敗：不明なエラー", { status: 500 });
+	if (check) {
+		return new Response("神社IDが既に存在します", { status: 409 });
 	}
+
+	// 挿入
+	await env.JINJYA_DB.prepare(
+		`INSERT INTO jinjya (id, name, spreadsheet_url, owner) VALUES (?, ?, ?, ?)`
+	).bind(id, name, spreadsheet_url, owner || null).run();
+
+	return new Response("神社を登録しました", { status: 201 });
 }

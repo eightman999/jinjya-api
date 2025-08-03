@@ -165,5 +165,13 @@ dist
 .env*
 !.env.example
 .wrangler/
-*.toml
+
+# Cloudflare セキュリティ設定ファイル（機密情報を含む）
+# 本番環境のwrangler.tomlには以下の機密情報が含まれる:
+# - account_id (Cloudflareアカウント識別子)
+# - zone_name (ドメイン設定)
+# - KV namespace id (KVストア識別子)
+# - D1 database_id (データベース識別子)
 wrangler.toml
+wrangler.*.toml
+wrangler.jsonc
