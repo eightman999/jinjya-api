@@ -1,3 +1,5 @@
+import { Env } from '../../types/worker-configuration';
+
 export async function checkRateLimit(env: Env, ip: string, limit = 10, windowSec = 60): Promise<boolean> {
   const now = Math.floor(Date.now() / 1000);
   const key = `${ip}:${Math.floor(now / windowSec)}`;
