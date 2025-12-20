@@ -6,6 +6,7 @@ declare namespace Cloudflare {
 		JINJYA_STORE: KVNamespace;
 		JINJYA_DB: D1Database;
 		RATE_LIMIT: KVNamespace;
+		ASSETS: Fetcher;
 	}
 }
 
