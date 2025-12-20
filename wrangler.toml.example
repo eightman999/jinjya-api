@@ -1,0 +1,49 @@
+# Cloudflare Workers Configuration Template
+# Copy this file to wrangler.toml and fill in your actual values
+# DO NOT commit wrangler.toml to git (it contains sensitive information)
+
+name = "jinjya-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Serve static assets from public directory
+[assets]
+directory = "public"
+
+# KV Namespaces
+# Create these in Cloudflare dashboard first, then add the IDs here
+[[kv_namespaces]]
+binding = "JINJYA_STORE"
+id = "YOUR_JINJYA_STORE_KV_ID"  # Replace with actual KV namespace ID
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "YOUR_RATE_LIMIT_KV_ID"  # Replace with actual KV namespace ID
+
+# D1 Database
+# Create this in Cloudflare dashboard first, then add the ID here
+[[d1_databases]]
+binding = "JINJYA_DB"
+database_name = "jinjya-db"
+database_id = "YOUR_D1_DATABASE_ID"  # Replace with actual D1 database ID
+
+# Cron Trigger - Runs every hour to publish buffered omikuji data
+[triggers]
+crons = ["0 * * * *"]
+
+# Custom Domain Routes
+# Uncomment and configure these after setting up your domains in Cloudflare
+# [[routes]]
+# pattern = "bakasekai.net/api/*"
+# zone_name = "bakasekai.net"
+#
+# [[routes]]
+# pattern = "jinjya-api.bakasekai.net/*"
+# zone_name = "bakasekai.net"
+
+# Development Configuration (optional)
+# [env.dev]
+# name = "jinjya-api-dev"
+#
+# [env.dev.assets]
+# directory = "public"
