@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神社管理 - Jinjya API</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⛩️ 神社管理</h1>
+            <p class="subtitle">神社の登録・管理</p>
+        </header>
+
+        <main>
+            <section class="admin-section">
+                <h2>神社を登録</h2>
+                <form id="register-form" class="form">
+                    <div class="form-group">
+                        <label for="shrine-id">神社ID *</label>
+                        <input type="text" id="shrine-id" required
+                               placeholder="例: tokyo_shrine_01"
+                               pattern="[a-zA-Z0-9_-]+"
+                               maxlength="64">
+                        <small>英数字、アンダースコア、ハイフンのみ使用可能</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="shrine-name">神社名 *</label>
+                        <input type="text" id="shrine-name" required
+                               placeholder="例: 東京神社"
+                               maxlength="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="spreadsheet-url">Google Sheets Webhook URL *</label>
+                        <input type="url" id="spreadsheet-url" required
+                               placeholder="https://script.google.com/macros/s/...">
+                        <small>Google Apps ScriptのWebアプリURLを入力</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="owner">管理者名（オプション）</label>
+                        <input type="text" id="owner"
+                               placeholder="例: 宮司 太郎"
+                               maxlength="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tags">固定タグカテゴリ（オプション）</label>
+                        <textarea id="tags" rows="4"
+                                  placeholder='例: {"恋愛": "恋愛運について", "金運": "金運について", "健康": "健康運について"}'></textarea>
+                        <small>JSON形式で入力。設定すると、ユーザーはこれらのカテゴリのみ使用可能になります</small>
+                    </div>
+
+                    <button type="submit" class="submit-button">神社を登録</button>
+                </form>
+
+                <div id="register-result" class="message" style="display: none;"></div>
+            </section>
+
+            <section class="admin-section">
+                <h2>登録済み神社一覧</h2>
+                <div id="shrine-admin-list" class="shrine-list">
+                    <p class="loading">神社一覧を読み込み中...</p>
+                </div>
+            </section>
+
+            <section class="admin-section">
+                <h2>おみくじを投稿</h2>
+                <form id="submit-form" class="form">
+                    <div class="form-group">
+                        <label for="submit-jinjya">神社を選択 *</label>
+                        <select id="submit-jinjya" required>
+                            <option value="">神社を選択してください</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fortune">運勢 *</label>
+                        <select id="fortune" required>
+                            <option value="">選択してください</option>
+                            <option value="大吉">大吉</option>
+                            <option value="中吉">中吉</option>
+                            <option value="小吉">小吉</option>
+                            <option value="吉">吉</option>
+                            <option value="末吉">末吉</option>
+                            <option value="凶">凶</option>
+                            <option value="大凶">大凶</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="message">おみくじメッセージ *</label>
+                        <textarea id="message" required rows="3"
+                                  placeholder="今日のあなたの運勢は..."
+                                  maxlength="200"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>タグ（オプション）</label>
+                        <div id="tags-container">
+                            <div class="tag-input">
+                                <input type="text" class="tag-key" placeholder="カテゴリ（例: 恋愛）">
+                                <input type="text" class="tag-value" placeholder="メッセージ">
+                            </div>
+                        </div>
+                        <button type="button" id="add-tag-button" class="secondary-button">タグを追加</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>追加情報（オプション）</label>
+                        <div id="extra-container">
+                            <div class="extra-input">
+                                <input type="text" class="extra-key" placeholder="項目（例: ラッキーカラー）">
+                                <input type="text" class="extra-value" placeholder="値（例: 赤）">
+                            </div>
+                        </div>
+                        <button type="button" id="add-extra-button" class="secondary-button">追加情報を追加</button>
+                    </div>
+
+                    <button type="submit" class="submit-button">おみくじを投稿</button>
+                </form>
+
+                <div id="submit-result" class="message" style="display: none;"></div>
+            </section>
+        </main>
+
+        <footer>
+            <p>
+                <a href="/">おみくじを引く</a>
+            </p>
+            <p class="footer-note">Powered by Jinjya API on Cloudflare Workers</p>
+        </footer>
+    </div>
+
+    <script src="/admin.js"></script>
+</body>
+</html>

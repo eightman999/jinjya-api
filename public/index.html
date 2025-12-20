@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神社おみくじ - Jinjya API</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⛩️ 神社おみくじ</h1>
+            <p class="subtitle">運勢を占ってみましょう</p>
+        </header>
+
+        <main>
+            <section class="shrine-selection">
+                <h2>神社を選択</h2>
+                <div id="shrine-list" class="shrine-cards">
+                    <p class="loading">神社一覧を読み込み中...</p>
+                </div>
+            </section>
+
+            <section class="omikuji-section" id="omikuji-section" style="display: none;">
+                <h2>選択した神社: <span id="selected-shrine-name"></span></h2>
+                <button id="draw-button" class="draw-button">
+                    🎋 おみくじを引く
+                </button>
+            </section>
+
+            <section class="result-section" id="result-section" style="display: none;">
+                <h2>おみくじの結果</h2>
+                <div id="result-content" class="result-card">
+                    <!-- Results will be displayed here -->
+                </div>
+                <button id="draw-again-button" class="secondary-button">
+                    もう一度引く
+                </button>
+            </section>
+        </main>
+
+        <footer>
+            <p>
+                <a href="/admin.html">神社管理者の方はこちら</a>
+            </p>
+            <p class="footer-note">Powered by Jinjya API on Cloudflare Workers</p>
+        </footer>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>

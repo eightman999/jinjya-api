@@ -23,6 +23,7 @@ export default {
 			method: request.method,
 		});
 
+		// Handle API routes
 		if (request.method === "POST" && url.pathname === "/api/publish") {
 			return await handlePublish(env);
 		}
@@ -47,6 +48,22 @@ export default {
 
 		if (pathname === "/api/jinjya/deregister" && request.method === "POST") {
 			return await handleDeregister(request, env);
+		}
+
+		// Serve static assets from public directory
+		if (env.ASSETS) {
+			// Rewrite root path to index.html
+			if (pathname === "/" || pathname === "") {
+				return env.ASSETS.fetch(new URL("/index.html", request.url));
+			}
+
+			// Try to serve the static asset
+			const assetResponse = await env.ASSETS.fetch(request);
+
+			// If asset exists, return it
+			if (assetResponse.status !== 404) {
+				return assetResponse;
+			}
 		}
 
 		return new Response(`Not Found: ${pathname}`, { status: 404 });
