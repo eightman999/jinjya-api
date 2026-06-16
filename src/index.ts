@@ -7,6 +7,7 @@ import { handleRead } from './api/read';
 import { handleList } from './api/jinjya_list';
 import { handleRegister } from './api/jinjya_register';
 import { handleDeregister } from './api/jinjya_deregister';
+import { handleOmikujiAdd } from './api/omikuji_add';
 import { preflight, text } from './utils/http';
 
 async function handleCron(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
@@ -38,6 +39,9 @@ export default {
 		}
 		if (pathname === '/api/draw' && request.method === 'GET') {
 			return await handleDraw(request, env);
+		}
+		if (pathname === '/api/omikuji/add' && request.method === 'POST') {
+			return await handleOmikujiAdd(request, env);
 		}
 		if (pathname === '/api/read' && request.method === 'GET') {
 			return await handleRead(request, env);
