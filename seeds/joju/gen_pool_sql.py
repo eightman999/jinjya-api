@@ -26,7 +26,9 @@ def main():
     rows = list(csv.DictReader(open(os.path.join(HERE, "omikuji.csv"), encoding="utf-8")))
     jinjya_ids = sorted({r["jinjya"] for r in rows})
 
-    lines = ["-- 自動生成: gen_pool_sql.py（omikuji.csv より）", "BEGIN TRANSACTION;"]
+    # 注意: D1(remote) は SQL の BEGIN TRANSACTION/COMMIT を禁止しているため使わない。
+    # wrangler d1 execute --file は各文を順に実行する（DELETE→INSERT で冪等）。
+    lines = ["-- 自動生成: gen_pool_sql.py（omikuji.csv より）"]
     for jid in jinjya_ids:
         lines.append(f"DELETE FROM omikuji WHERE jinjya = {sql_str(jid)};")
 
@@ -44,7 +46,6 @@ def main():
             ])
             + ");"
         )
-    lines.append("COMMIT;")
 
     out = os.path.join(HERE, "seed_pool.sql")
     with open(out, "w", encoding="utf-8") as f:
