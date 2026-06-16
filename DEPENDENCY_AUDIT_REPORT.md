@@ -8,8 +8,8 @@
 
 The jinjya-api project maintains a lean dependency footprint with **only 1 production dependency** and **5 development dependencies**. The audit revealed:
 
-- ✅ **Zero security vulnerabilities**
-- ✅ **Minimal dependency bloat** (269MB node_modules)
+- ✅ **Zero production-runtime vulnerabilities** (`npm audit --omit=dev` → 0); the only dependency bundled into the deployed Worker is `zod`
+- ⚠️ **Dev-tooling advisories present** (`npm audit` → 12 package-level: 1 critical, 9 high, 2 moderate) — all in the vitest / vite / wrangler / miniflare / esbuild chain, none of which ships to the edge
 - ✅ **All dependencies are necessary and actively used**
 - ⚠️ **One outdated package** (vitest) - but upgrade blocked by compatibility constraints
 - ✅ **All production dependencies are up-to-date**
@@ -32,13 +32,40 @@ The jinjya-api project maintains a lean dependency footprint with **only 1 produ
 
 ## Security Analysis
 
+> **Re-audited:** 2026-06-16
+
 ### Vulnerability Scan Results
+
+Production-only scan (what actually ships to the deployed Cloudflare Worker):
 ```
-npm audit report
+npm audit --omit=dev
 found 0 vulnerabilities
 ```
 
-**Conclusion:** No known security vulnerabilities detected in the dependency tree.
+Full scan (includes dev tooling):
+```
+npm audit
+1 critical, 9 high, 2 moderate (package-level)
+```
+
+All advisories in the full scan come from **development dependencies only** and are never
+bundled into the Worker. Representative items:
+
+| Package | Severity | Pulled in via |
+|---------|----------|---------------|
+| vitest (<3.2.6) | critical | vitest (test runner) |
+| wrangler (<4.59.1) | high | wrangler (`pages deploy` CLI) |
+| esbuild, rollup, vite, picomatch, postcss | high–moderate | vitest → vite build chain |
+| undici, ws | high–moderate | wrangler / vitest-pool-workers → miniflare |
+| devalue | high–low | @cloudflare/vitest-pool-workers |
+
+**Conclusion:** No vulnerabilities affect the deployed Worker runtime (production audit is clean).
+The dev-tooling advisories are non-urgent. Plain `npm audit fix` clears the semver-compatible
+items (vite/vitest/rollup/postcss/picomatch/devalue); the remaining Cloudflare toolchain cluster
+(@cloudflare/vitest-pool-workers / wrangler / miniflare / undici / ws) would require
+`npm audit fix --force`, which npm resolves by **downgrading** `@cloudflare/vitest-pool-workers`
+(0.11.1 → 0.10.15) — not recommended. Prefer waiting for upstream `@cloudflare/vitest-pool-workers`
+releases (same constraint that blocks the vitest v4 upgrade).
 
 ## Detailed Findings
 
