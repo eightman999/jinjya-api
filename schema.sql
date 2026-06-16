@@ -5,7 +5,7 @@ CREATE TABLE jinjya (
 						id TEXT PRIMARY KEY,
 						name TEXT NOT NULL,
 						spreadsheet_url TEXT NOT NULL,
-						owner TEXT NOT NULL,
+						owner TEXT, -- 任意（ownerなしでも登録可能なオープン運用）
 						tags TEXT, -- JSON string of fixed tag categories for this shrine
 						created_at INTEGER DEFAULT (strftime('%s', 'now')),
 						CONSTRAINT unique_owner_name UNIQUE(owner, name)

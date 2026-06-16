@@ -49,7 +49,7 @@ curl https://bakasekai.net/api/draw?jinjya=furin
 **リクエストボディ**:
 ```json
 {
-  "jinjya": "神社ID（必須、1-64文字）",
+  "jinjya": "神社ID（必須、1-64文字の半角英数字・ハイフン・アンダースコア）",
   "fortune": "運勢レベル（必須、例: 大吉、中吉、小吉、凶）",
   "message": "メッセージ本文（必須、最大200文字）",
   "tags": {
@@ -70,8 +70,8 @@ curl https://bakasekai.net/api/draw?jinjya=furin
 - `extra`: ラッキーカラー、ラッキーアニマル、開運方位などの追加情報
 
 **バリデーション**:
-- 各フィールド最大200文字
-- NGワードチェック適用
+- 各フィールド（`tags`と`extra`のキー・値を含む）最大200文字
+- NGワードチェック適用（`tags`と`extra`のキー・値を含む）
 - レート制限: 60秒間に10リクエスト
 
 **レスポンス**:
@@ -154,7 +154,7 @@ print(f"メッセージ: {omikuji['message']}")
   "id": "神社の一意ID（必須）",
   "name": "神社の表示名（必須）",
   "spreadsheet_url": "Google Apps Script WebhookのURL（必須）",
-  "owner": "管理者識別子（必須）",
+  "owner": "管理者識別子（オプション）",
   "tags": {
     "カテゴリ名": "説明（オプション）"
   }
@@ -217,22 +217,23 @@ curl -X POST https://bakasekai.net/api/jinjya/register \
 
 #### 5️⃣ データ配信 - `POST /api/publish`
 
-バッファ内のおみくじデータを各神社のGoogle Sheetsに手動で配信します。
+バッファ内のおみくじデータを各神社のGoogle Sheetsに手動で配信します。送信されるデータには、KVに保存されたタイムスタンプが含まれます。
 
 **注意**:
 - 通常はCronジョブで毎時0分に自動実行されます
 - このエンドポイントは手動配信や障害復旧時に使用
+- レート制限の対象です
+- Webhook側でエラーが発生した場合も、詳細なエラーメッセージは返さず一般的なステータスのみを返します
 
 **レスポンス例**:
-```
-成功: 2 神社
-```
+- `200 OK`: "成功: 2 神社"
+- `200 OK`: "公開対象のおみくじはありません" (バッファが空の場合)
 
 ---
 
 #### 6️⃣ 神社削除 - `POST /api/jinjya/deregister`
 
-登録済みの神社を削除します。
+登録済みの神社を削除します。このエンドポイントもレート制限の対象です。
 
 **リクエストボディ**:
 ```json
@@ -246,6 +247,9 @@ curl -X POST https://bakasekai.net/api/jinjya/register \
 #### 7️⃣ バッファ確認 - `GET /api/read`
 
 現在のKVバッファの内容を確認します（デバッグ用）。
+
+**クエリパラメータ**:
+- `jinjya`: 神社ID（オプション）。指定した場合はその神社のバッファのみ、省略した場合は全神社のバッファを返します。
 
 ---
 
@@ -389,6 +393,7 @@ curl -X POST https://bakasekai.net/api/jinjya/register \
 ### ⚠️ 注意事項
 
 - **レート制限**: 各エンドポイントは60秒間に10リクエストまで
+- **CORS**: 全ての `/api/*` でCORSが有効です。
 - **文字数制限**: 各フィールドは最大200文字
 - **NGワード**: 不適切な内容は自動的に拒否されます
 - **バッファ上限**: 1神社あたり1000件まで（超過時は古いデータから削除）
@@ -447,7 +452,7 @@ Submit an omikuji to the buffer.
 **Request Body**:
 ```json
 {
-  "jinjya": "Shrine ID (required, 1-64 characters)",
+  "jinjya": "Shrine ID (required, 1-64 chars: letters, digits, hyphens, underscores)",
   "fortune": "Fortune level (required, e.g., Great Blessing, Good Blessing)",
   "message": "Message body (required, max 200 characters)",
   "tags": {
@@ -468,8 +473,8 @@ Submit an omikuji to the buffer.
 - `extra`: Additional info like lucky color, lucky animal, auspicious direction
 
 **Validation**:
-- Max 200 characters per field
-- NG word filtering applied
+- Max 200 characters per field (including `tags` and `extra` keys and values)
+- NG word filtering applied (including `tags` and `extra` keys and values)
 - Rate limit: 10 requests per 60 seconds
 
 **Response**:
@@ -552,7 +557,7 @@ Register a new shrine. After registration, omikuji submission and drawing become
   "id": "Unique shrine ID (required)",
   "name": "Shrine display name (required)",
   "spreadsheet_url": "Google Apps Script Webhook URL (required)",
-  "owner": "Owner identifier (required)",
+  "owner": "Owner identifier (optional)",
   "tags": {
     "Category Name": "Description (optional)"
   }
@@ -615,23 +620,23 @@ Retrieve information about all registered shrines.
 
 #### 5️⃣ Publish Data - `POST /api/publish`
 
-Manually publish buffered omikuji data to each shrine's Google Sheets.
+Manually publish buffered omikuji data to each shrine's Google Sheets. The published payload includes a timestamp field restored from the KV buffer.
 
 **Note**:
 - Normally executed automatically by cron job at the top of every hour
 - This endpoint is for manual publishing or disaster recovery
+- Rate-limited
+- Webhook errors are not echoed verbatim to the caller; only a generic status is returned.
 
 **Response Example**:
-```
-成功: 2 神社
-(Success: 2 shrines)
-```
+- `200 OK`: "成功: 2 神社" (Success: 2 shrines)
+- `200 OK`: "公開対象のおみくじはありません" (When buffer is empty)
 
 ---
 
 #### 6️⃣ Deregister Shrine - `POST /api/jinjya/deregister`
 
-Delete a registered shrine.
+Delete a registered shrine. This endpoint is rate-limited.
 
 **Request Body**:
 ```json
@@ -645,6 +650,9 @@ Delete a registered shrine.
 #### 7️⃣ Read Buffer - `GET /api/read`
 
 View current KV buffer contents (for debugging).
+
+**Query Parameters**:
+- `jinjya`: Shrine ID (optional). If specified, returns only that shrine's buffer. If omitted, returns buffers for all shrines.
 
 ---
 
@@ -788,6 +796,7 @@ Now, buffered data will be automatically recorded to Google Sheets at the top of
 ### ⚠️ Important Notes
 
 - **Rate Limiting**: Each endpoint allows 10 requests per 60 seconds
+- **CORS**: CORS is enabled on all `/api/*` endpoints.
 - **Character Limit**: Each field has a maximum of 200 characters
 - **NG Words**: Inappropriate content is automatically rejected
 - **Buffer Limit**: 1000 entries per shrine (oldest deleted when exceeded)

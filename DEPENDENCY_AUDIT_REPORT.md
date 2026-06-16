@@ -111,7 +111,8 @@ None required. The project is in excellent shape.
 
 ### Optional Improvements
 
-1. **Add npm scripts for dependency management**
+1. **Npm scripts for dependency management**
+   The project already includes useful npm scripts in `package.json` for dependency management:
    ```json
    {
      "scripts": {

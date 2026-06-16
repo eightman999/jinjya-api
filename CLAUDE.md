@@ -27,7 +27,7 @@ All endpoints are routed through `src/index.ts`.
 | `POST` | `/api/submit`             | Submits an omikuji fortune. The data is validated and stored in the KV buffer.                          |
 | `GET`  | `/api/draw`               | Draws a random omikuji from the KV buffer for a specified shrine (`?jinjya=...`).                       |
 | `POST` | `/api/publish`            | Manually triggers the process to publish buffered data to all registered shrines' Google Sheets.        |
-| `GET`  | `/api/read`               | Reads the current contents of the KV buffer.                                                            |
+| `GET`  | `/api/read`               | Reads the current contents of the KV buffer. Accepts an optional `?jinjya=<id>` parameter to filter by a specific shrine; otherwise returns the buffer for all shrines. |
 | `POST` | `/api/jinjya/register`    | Registers a new shrine, storing its metadata (ID, name, webhook URL) in the D1 database.                |
 | `POST` | `/api/jinjya/deregister`  | De-registers a shrine, removing it from the D1 database.                                                |
 | `GET`  | `/api/jinjya/list`        | Lists all currently registered shrines from the D1 database.                                            |
@@ -62,7 +62,7 @@ The core data object for an omikuji, defined in `src/api/schema.ts` as `OmikujiS
 ```
 
 **Field Details:**
-- `jinjya`: Required. The ID of the shrine this omikuji belongs to (must match a registered shrine ID).
+- `jinjya`: Required. The ID of the shrine this omikuji belongs to (1-64 characters, letters, digits, hyphens, and underscores only).
 - `fortune`: Required. The main fortune level or result.
 - `message`: Required. The detailed message or interpretation.
 - `tags`: Optional. Key-value pairs representing fortune categories and their descriptions. **If the shrine has fixed tag categories configured, only those categories are accepted.** Common categories include 恋愛 (love), 金運 (money), 仕事 (work), 健康 (health), etc.
@@ -129,9 +129,12 @@ Valid omikuji submission to this shrine:
 
 ### Content Validation
 - **Zod Schema**: All submissions are validated against the `OmikujiSchema` using Zod.
-- **Character Limits**: All string fields have a maximum length of 200 characters.
-- **NG Words**: Content is filtered against a list of inappropriate words defined in `src/constants/ngWords.ts`.
+- **Character Limits**: All string fields (including `tags` and `extra` keys and values) have a maximum length of 200 characters.
+- **NG Words**: Content (including `tags` and `extra` keys and values) is filtered against a list of inappropriate words defined in `src/constants/ngWords.ts`.
 - **Fixed Tag Categories**: If a shrine has fixed tag categories configured, user submissions are validated against those categories.
+
+### CORS & Security
+- **CORS**: Cross-Origin Resource Sharing is enabled for all `/api/*` endpoints. Preflight `OPTIONS` requests return 204.
 
 ### Buffer Key Format
 KV store keys follow the pattern: `buffer:{jinjyaId}:{timestamp}`

@@ -1,24 +1,23 @@
 // src/api/draw.ts
 import { Env } from '../../types/worker-configuration';
-import { checkRateLimit } from '../utils/checkRateLimit';
+import { json, rateLimited, text } from '../utils/http';
 
 export async function handleDraw(request: Request, env: Env): Promise<Response> {
 	// レート制限チェック
-	if (!await checkRateLimit(env, request.headers.get("CF-Connecting-IP") || "unknown")) {
-		return new Response("Too Many Requests", { status: 429 });
-	}
+	const limited = await rateLimited(request, env);
+	if (limited) return limited;
 
 	const { searchParams } = new URL(request.url);
-	const jinjyaId = searchParams.get("jinjya") || "default";
+	const jinjyaId = searchParams.get('jinjya') || 'default';
 
 	const listResponse = await env.JINJYA_STORE.list({ prefix: `buffer:${jinjyaId}:` });
 	const keys = listResponse.keys.map((k: { name: string }) => k.name);
 
 	if (keys.length === 0) {
-		return new Response("まだ誰も奉納していません🙏", { status: 404 });
+		return text('まだ誰も奉納していません🙏', 404);
 	}
 
-	// バッファ上限制御（例：100件超えたら古いもの削除）
+	// バッファ上限制御（上限を超えたら古いものから削除）
 	const MAX_BUFFER = 1000;
 	if (keys.length > MAX_BUFFER) {
 		const sorted = keys.sort(); // timestamp順
@@ -31,11 +30,8 @@ export async function handleDraw(request: Request, env: Env): Promise<Response> 
 	const omikujiStr = await env.JINJYA_STORE.get(randomKey);
 
 	if (!omikujiStr) {
-		return new Response("おみくじが壊れています…", { status: 500 });
+		return text('おみくじが壊れています…', 500);
 	}
 
-	return new Response(omikujiStr, {
-		headers: { "Content-Type": "application/json" },
-		status: 200,
-	});
+	return json(omikujiStr, 200);
 }

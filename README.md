@@ -59,7 +59,7 @@ curl -X POST https://bakasekai.net/api/jinjya/register \
     "id": "furin",
     "name": "風鈴神社",
     "spreadsheet_url": "https://script.googleusercontent.com/...",
-    "owner": "your-name-or-identifier"
+    "owner": "your-name-or-identifier" // オプション
   }'
 ```
 
@@ -128,7 +128,7 @@ curl -X POST https://bakasekai.net/api/submit \
 | `/api/draw` | `GET` | ランダムなおみくじを引く |
 | `/api/submit` | `POST` | おみくじ結果を送信（KVバッファに保存） |
 | `/api/publish` | `POST` | バッファされたデータを各神社のGASへ送信 |
-| `/api/read` | `GET` | 現在のKVバッファ内容を確認（開発用） |
+| `/api/read` | `GET` | 現在のKVバッファ内容を確認（開発用）。`?jinjya=<id>` で特定の神社のみ取得可能、指定なしで全神社取得。 |
 | `/api/jinjya/list` | `GET` | 登録済み神社一覧 |
 | `/api/jinjya/register` | `POST` | 神社を登録（GAS URLなど） |
 | `/api/jinjya/deregister` | `POST` | 神社の登録を削除 |
@@ -202,15 +202,17 @@ curl -X POST https://bakasekai.net/api/submit \
 
 ## 🛡️ 安全設計・データ検証
 
-### セキュリティ
+### セキュリティとCORS
+- **CORS**: 全ての `/api/*` エンドポイントでCORSが有効になっており、ブラウザからの直接アクセス（`fetch`など）が可能です。プリフライトリクエスト（OPTIONS）にも対応しています。
 - データは神社（オーナー）のスプレッドシートにしか送信されません
 - クライアントは任意の神社に送信可能ですが、**GAS側の認証により不正投稿はブロックできます**
 - 本API側ではパスワード・メールアドレス等の**個人情報を保持しません**
 
 ### データ検証
-- **文字数制限**: すべての文字列フィールドは最大200文字まで
-- **NGワード検証**: 不適切な投稿を自動フィルタリング
+- **文字数制限**: すべての文字列フィールド（`tags`や`extra`のキーと値を含む）は最大200文字まで
+- **NGワード検証**: 不適切な投稿を自動フィルタリング（`tags`や`extra`のキーと値も対象）
 - **スキーマ検証**: Zodライブラリによる厳密な型チェック
+- **神社ID検証**: 半角英数字、ハイフン、アンダースコアのみ（1〜64文字）
 - **必須フィールド**: `jinjya`, `fortune`, `message` は必須入力
 - **固定タグ検証**: 神社に固定タグが設定されている場合、許可されたカテゴリのみ投稿可能
 

@@ -1,16 +1,17 @@
-import { handleSubmit } from "./api/submit";
-import { handleDraw } from "./api/draw";
+import { handleSubmit } from './api/submit';
+import { handleDraw } from './api/draw';
 import { Env } from '../types/worker-configuration';
 import { ExecutionContext, ScheduledEvent } from '@cloudflare/workers-types';
-import { handlePublish } from "./api/publish";
-import { handleRead } from "./api/read";
-import { handleList } from "./api/jinjya_list";
-import { handleRegister } from "./api/jinjya_register";
-import { handleDeregister } from "./api/jinjya_deregister";
+import { handlePublish, publishBuffered } from './api/publish';
+import { handleRead } from './api/read';
+import { handleList } from './api/jinjya_list';
+import { handleRegister } from './api/jinjya_register';
+import { handleDeregister } from './api/jinjya_deregister';
+import { preflight, text } from './utils/http';
 
 async function handleCron(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-	console.log("⛩️ Cron Trigger発動: Publishing...");
-	await handlePublish(env);
+	console.log('⛩️ Cron Trigger発動: Publishing...');
+	await publishBuffered(env);
 }
 
 export default {
@@ -18,43 +19,44 @@ export default {
 		const url = new URL(request.url);
 		const { pathname } = url;
 
-		console.log("📡 Request received:", {
+		console.log('📡 Request received:', {
 			pathname,
 			method: request.method,
 		});
 
-		// Handle API routes
-		if (request.method === "POST" && url.pathname === "/api/publish") {
-			return await handlePublish(env);
+		// CORS プリフライト
+		if (request.method === 'OPTIONS' && pathname.startsWith('/api/')) {
+			return preflight();
 		}
-		if (pathname === "/api/submit" && request.method === "POST") {
+
+		// Handle API routes
+		if (pathname === '/api/publish' && request.method === 'POST') {
+			return await handlePublish(request, env);
+		}
+		if (pathname === '/api/submit' && request.method === 'POST') {
 			return await handleSubmit(request, env);
 		}
-
-		if (pathname === "/api/draw" && request.method === "GET") {
+		if (pathname === '/api/draw' && request.method === 'GET') {
 			return await handleDraw(request, env);
 		}
-
-		if (request.method === "GET" && url.pathname === "/api/read") {
-			return await handleRead(env);
+		if (pathname === '/api/read' && request.method === 'GET') {
+			return await handleRead(request, env);
 		}
-		if (pathname === "/api/jinjya/list" && request.method === "GET") {
-			return await handleList(env);
+		if (pathname === '/api/jinjya/list' && request.method === 'GET') {
+			return await handleList(request, env);
 		}
-
-		if (pathname === "/api/jinjya/register" && request.method === "POST") {
+		if (pathname === '/api/jinjya/register' && request.method === 'POST') {
 			return await handleRegister(request, env);
 		}
-
-		if (pathname === "/api/jinjya/deregister" && request.method === "POST") {
+		if (pathname === '/api/jinjya/deregister' && request.method === 'POST') {
 			return await handleDeregister(request, env);
 		}
 
 		// Serve static assets from public directory
 		if (env.ASSETS) {
 			// Rewrite root path to index.html
-			if (pathname === "/" || pathname === "") {
-				return env.ASSETS.fetch(new URL("/index.html", request.url));
+			if (pathname === '/' || pathname === '') {
+				return env.ASSETS.fetch(new URL('/index.html', request.url));
 			}
 
 			// Try to serve the static asset
@@ -66,7 +68,7 @@ export default {
 			}
 		}
 
-		return new Response(`Not Found: ${pathname}`, { status: 404 });
+		return text(`Not Found: ${pathname}`, 404);
 	},
 
 	async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {

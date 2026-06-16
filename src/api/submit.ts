@@ -1,41 +1,51 @@
 // src/api/submit.ts
-import { z } from "zod";
-import { OmikujiSchema } from "./schema";
+import { z } from 'zod';
+import { OmikujiSchema } from './schema';
 import type { Env } from '../../types/worker-configuration';
-import { NG_WORDS } from "../constants/ngWords";
-import { checkRateLimit } from '../utils/checkRateLimit';
-
+import { NG_WORDS } from '../constants/ngWords';
+import { rateLimited, text } from '../utils/http';
 
 const MAX_LENGTH = 200;
+
 /**
  * NGワードが含まれているかチェックする関数
- * @param text チェックするテキスト
+ * @param value チェックするテキスト
  * @returns NGワードが含まれていればtrue、そうでなければfalse
  */
-function containsNGWords(text: string): boolean {
-	return NG_WORDS.some((word) => text.includes(word));
+function containsNGWords(value: string): boolean {
+	return NG_WORDS.some((word) => value.includes(word));
 }
 
-export async function handleSubmit(
-	request: Request,
-	env: Env
-): Promise<Response> {
+/**
+ * 文字列が長すぎず、NGワードを含まないか検証する。
+ * @returns 問題があればエラーメッセージ、なければ null
+ */
+function validateString(value: string): string | null {
+	if (value.length > MAX_LENGTH) return 'Too long input';
+	if (containsNGWords(value)) return 'Inappropriate content';
+	return null;
+}
+
+export async function handleSubmit(request: Request, env: Env): Promise<Response> {
 	// レート制限チェック
-	if (!await checkRateLimit(env, request.headers.get("CF-Connecting-IP") || "unknown")) {
-		return new Response("Too Many Requests", { status: 429 });
+	const limited = await rateLimited(request, env);
+	if (limited) return limited;
+
+	let omikuji: z.infer<typeof OmikujiSchema>;
+	try {
+		const body = await request.json();
+		// ✅ スキーマ検証
+		omikuji = OmikujiSchema.parse(body);
+	} catch (err) {
+		console.error('[Submit Error] invalid payload', err);
+		return text('Invalid submission', 400);
 	}
 
 	try {
-		const body = await request.json();
-
-		// ✅ スキーマ検証
-		const omikuji = OmikujiSchema.parse(body);
+		const jinjyaId = omikuji.jinjya;
 
 		// ✅ 神社の固定タグカテゴリを取得・検証
-		const jinjyaId = body.jinjya ?? "default";
-		const jinjyaData = await env.JINJYA_DB.prepare(
-			`SELECT tags FROM jinjya WHERE id = ?`
-		).bind(jinjyaId).first();
+		const jinjyaData = await env.JINJYA_DB.prepare(`SELECT tags FROM jinjya WHERE id = ?`).bind(jinjyaId).first();
 
 		// 神社の固定タグカテゴリを取得（なければ制限なし）
 		let allowedTagCategories: string[] = [];
@@ -49,53 +59,43 @@ export async function handleSubmit(
 		}
 
 		// ✅ ユーザー入力タグの検証（神社が固定タグを設定している場合のみ）
-		if (allowedTagCategories.length > 0 && omikuji.tags) {
+		if (allowedTagCategories.length > 0) {
 			for (const tagCategory of Object.keys(omikuji.tags)) {
 				if (!allowedTagCategories.includes(tagCategory)) {
-					return new Response(
+					return text(
 						`Invalid tag category "${tagCategory}". Allowed categories for this shrine: ${allowedTagCategories.join(', ')}`,
-						{ status: 400 }
+						400
 					);
 				}
 			}
 		}
 
 		// ✅ NGワードチェック & 文字数制限
-		for (const key of Object.keys(omikuji)) {
-			const value = omikuji[key as keyof typeof omikuji];
-			if (typeof value === "string") {
-				if (value.length > MAX_LENGTH) {
-					return new Response("Too long input", { status: 400 });
-				}
-				if (containsNGWords(value)) {
-					return new Response("Inappropriate content", { status: 400 });
-				}
-			} else if (typeof value === "object" && value !== null) {
-				// tags/extraオブジェクトの値をチェック
-				for (const nestedValue of Object.values(value)) {
-					if (typeof nestedValue === "string") {
-						if (nestedValue.length > MAX_LENGTH) {
-							return new Response("Too long input", { status: 400 });
-						}
-						if (containsNGWords(nestedValue)) {
-							return new Response("Inappropriate content", { status: 400 });
-						}
+		for (const value of Object.values(omikuji)) {
+			if (typeof value === 'string') {
+				const err = validateString(value);
+				if (err) return text(err, 400);
+			} else if (typeof value === 'object' && value !== null) {
+				// tags/extra オブジェクトはキー・値の両方をチェックする
+				for (const [nestedKey, nestedValue] of Object.entries(value)) {
+					const keyErr = validateString(nestedKey);
+					if (keyErr) return text(keyErr, 400);
+					if (typeof nestedValue === 'string') {
+						const valErr = validateString(nestedValue);
+						if (valErr) return text(valErr, 400);
 					}
 				}
 			}
 		}
 
-		// ✅ バッファキーを作成
-		// jinjyaIdは既に上で取得済み
+		// ✅ バッファキーを作成して保存
 		const timestamp = Date.now();
 		const key = `buffer:${jinjyaId}:${timestamp}`;
-
-		// ✅ 保存
 		await env.JINJYA_STORE.put(key, JSON.stringify(omikuji));
 
-		return new Response("奉納を受け付けました🙏", { status: 200 });
-	} catch (err: any) {
-		console.error("[Submit Error]", err);
-		return new Response("Invalid submission", { status: 400 });
+		return text('奉納を受け付けました🙏', 200);
+	} catch (err) {
+		console.error('[Submit Error]', err);
+		return text('Internal Server Error', 500);
 	}
 }

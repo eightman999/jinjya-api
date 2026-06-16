@@ -1,0 +1,17 @@
+{
+	// vitest (vitest-pool-workers) 専用の Worker 設定。
+	// 機密情報を含まないため、これは意図的にコミットしている。
+	// 本番デプロイ用の設定は gitignore された wrangler.toml / wrangler.jsonc 側。
+	// 注意: assets バインディングはあえて含めない（"/" が index.html を返すと
+	// 既存の「ルートは 404」テストが壊れるため）。
+	"name": "jinjya-api-test",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-01-01",
+	"kv_namespaces": [
+		{ "binding": "JINJYA_STORE", "id": "test_jinjya_store" },
+		{ "binding": "RATE_LIMIT", "id": "test_rate_limit" }
+	],
+	"d1_databases": [
+		{ "binding": "JINJYA_DB", "database_name": "jinjya-db-test", "database_id": "test_jinjya_db" }
+	]
+}
