@@ -15,15 +15,34 @@ async function handleCron(event: ScheduledEvent, env: Env, ctx: ExecutionContext
 	await publishBuffered(env);
 }
 
+// 既知のAPIパス。ここに無いパスへのアクセスは脆弱性スキャナのボットが大半のため、
+// ログを出さずに 404 を返す（Workers Logs の消費を抑える）。
+const KNOWN_API_PATHS = new Set([
+	'/api/publish',
+	'/api/submit',
+	'/api/draw',
+	'/api/omikuji/add',
+	'/api/read',
+	'/api/jinjya/list',
+	'/api/jinjya/register',
+	'/api/jinjya/deregister',
+]);
+
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const url = new URL(request.url);
 		const { pathname } = url;
 
-		console.log('📡 Request received:', {
-			pathname,
-			method: request.method,
-		});
+		// HEAD は GET と同じルートで処理する（死活監視ツール対策）。
+		// Workers ランタイムが HEAD レスポンスのボディを自動的に落とす。
+		const method = request.method === 'HEAD' ? 'GET' : request.method;
+
+		if (KNOWN_API_PATHS.has(pathname)) {
+			console.log('📡 Request received:', {
+				pathname,
+				method: request.method,
+			});
+		}
 
 		// CORS プリフライト
 		if (request.method === 'OPTIONS' && pathname.startsWith('/api/')) {
@@ -31,28 +50,28 @@ export default {
 		}
 
 		// Handle API routes
-		if (pathname === '/api/publish' && request.method === 'POST') {
+		if (pathname === '/api/publish' && method === 'POST') {
 			return await handlePublish(request, env);
 		}
-		if (pathname === '/api/submit' && request.method === 'POST') {
+		if (pathname === '/api/submit' && method === 'POST') {
 			return await handleSubmit(request, env);
 		}
-		if (pathname === '/api/draw' && request.method === 'GET') {
+		if (pathname === '/api/draw' && method === 'GET') {
 			return await handleDraw(request, env);
 		}
-		if (pathname === '/api/omikuji/add' && request.method === 'POST') {
+		if (pathname === '/api/omikuji/add' && method === 'POST') {
 			return await handleOmikujiAdd(request, env);
 		}
-		if (pathname === '/api/read' && request.method === 'GET') {
+		if (pathname === '/api/read' && method === 'GET') {
 			return await handleRead(request, env);
 		}
-		if (pathname === '/api/jinjya/list' && request.method === 'GET') {
+		if (pathname === '/api/jinjya/list' && method === 'GET') {
 			return await handleList(request, env);
 		}
-		if (pathname === '/api/jinjya/register' && request.method === 'POST') {
+		if (pathname === '/api/jinjya/register' && method === 'POST') {
 			return await handleRegister(request, env);
 		}
-		if (pathname === '/api/jinjya/deregister' && request.method === 'POST') {
+		if (pathname === '/api/jinjya/deregister' && method === 'POST') {
 			return await handleDeregister(request, env);
 		}
 
