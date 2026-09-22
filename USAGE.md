@@ -107,7 +107,7 @@ console.log(result); // "奉納を受け付けました🙏"
 指定した神社のバッファからランダムにおみくじを1つ抽選します。
 
 **クエリパラメータ**:
-- `jinjya`: 神社ID（省略時は`default`）
+- `jinjya`: 神社ID（省略時はすべての神社から横断で抽選）
 
 **レスポンス例**:
 ```json
@@ -202,16 +202,24 @@ curl -X POST https://bakasekai.net/api/jinjya/register \
     "id": "furin",
     "name": "風鈴神社",
     "owner": "eightman",
+    "tags": {},
     "created_at": 1691234567
   },
   {
     "id": "love_shrine",
     "name": "恋愛神社",
     "owner": "shrine_master",
+    "tags": {
+      "恋愛": "恋愛運について",
+      "結婚": "結婚運について",
+      "人間関係": "人間関係について"
+    },
     "created_at": 1691234890
   }
 ]
 ```
+
+- `tags`: 神社に設定された固定タグカテゴリ。未設定なら `{}`（`/api/submit` の tags キーに制限なし）
 
 ---
 

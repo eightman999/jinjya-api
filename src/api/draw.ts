@@ -17,21 +17,23 @@ export async function handleDraw(request: Request, env: Env): Promise<Response> 
 	if (limited) return limited;
 
 	const { searchParams } = new URL(request.url);
-	const jinjyaId = searchParams.get('jinjya') || 'default';
+	// jinjya 未指定（または空）なら「すべての神社から」抽選する。
+	const jinjyaId = searchParams.get('jinjya') || null;
 
 	// 1) 永続プール(D1)から抽選。publish/cron では消えないので常時引ける。
 	//    テーブル未作成などで失敗しても、KVバッファへフォールバックする。
 	try {
-		const row = await env.JINJYA_DB.prepare(
-			`SELECT fortune, message, tags, extra FROM omikuji WHERE jinjya = ? ORDER BY RANDOM() LIMIT 1`
-		)
-			.bind(jinjyaId)
-			.first<{ fortune: string; message: string; tags: string | null; extra: string | null }>();
+		const stmt = jinjyaId
+			? env.JINJYA_DB.prepare(
+					`SELECT jinjya, fortune, message, tags, extra FROM omikuji WHERE jinjya = ? ORDER BY RANDOM() LIMIT 1`
+				).bind(jinjyaId)
+			: env.JINJYA_DB.prepare(`SELECT jinjya, fortune, message, tags, extra FROM omikuji ORDER BY RANDOM() LIMIT 1`);
+		const row = await stmt.first<{ jinjya: string; fortune: string; message: string; tags: string | null; extra: string | null }>();
 
 		if (row) {
 			return json(
 				{
-					jinjya: jinjyaId,
+					jinjya: row.jinjya,
 					fortune: row.fortune,
 					message: row.message,
 					tags: safeParse(row.tags),
@@ -45,7 +47,7 @@ export async function handleDraw(request: Request, env: Env): Promise<Response> 
 	}
 
 	// 2) フォールバック: 従来のKVバッファから抽選（投稿バッファ）
-	const listResponse = await env.JINJYA_STORE.list({ prefix: `buffer:${jinjyaId}:` });
+	const listResponse = await env.JINJYA_STORE.list({ prefix: jinjyaId ? `buffer:${jinjyaId}:` : 'buffer:' });
 	const keys = listResponse.keys.map((k: { name: string }) => k.name);
 
 	if (keys.length === 0) {
